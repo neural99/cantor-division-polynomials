@@ -556,9 +556,9 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         for k in xrange(1, d/2+1):
             s_num = s_num.substitute(y0^(2*k) == (SR(self.G).substitute(x=x0))^k,
                                      y1^(2*k) == (SR(self.G).substitute(x=x1))^k)
-        # if s_num is anti-symmetric, divide with the Vandemonde determinant
-        if bool(s_num.gcd(x0-x1) != 1):
-            s_num = s_num / (x0-x1)
+        # s_num is anti-symmetric, divide with the Vandemonde determinant
+        assert bool(s_num.gcd(x0-x1) != 1):
+        s_num = s_num / (x0-x1)
 
         # s_num is a symmetric polynomial in x0, x1.
         a = symmetric_poly_on_elementary_basis(s_num.factor()).factor()
@@ -574,8 +574,8 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         R = GF(p)['s1', 's2']
         # Since we divided away the solutions x0=x1, add all those back
         for j in GF(p):
-            yield x^2 + j
-        for i in xrange(1, p):
+            yield (x-j)^2
+        for i in GF(p):
             for j in GF(p):
                 if R(a).substitute(s1=i, s2=j) == 0:
                     yield x^2 - i * x + j
