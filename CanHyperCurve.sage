@@ -38,8 +38,12 @@ def test_randoms():
 #        test_find_V(H, p)
         lst1 = sorted(map(lambda k: str(k), list(set(H.division_points(level, p)))))
         lst2 = sorted(map(lambda k: str(k), list(set(H.division_points_naive(level, p)))))
+        print "Cantor: " + str(lst1)
+        print "Naive: " + str(lst2)
         if lst1 != lst2:
             print "failed: p=" + str(p) + " f = " + str(f)
+        else:
+            print "OK"
         p = P.next(p)
 
 def cantor_benchmark():
@@ -572,9 +576,6 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         #print a2
         
         R = GF(p)['s1', 's2']
-        # Since we divided away the solutions x0=x1, add all those back
-        for j in GF(p):
-            yield (x-j)^2
         for i in GF(p):
             for j in GF(p):
                 if R(a).substitute(s1=i, s2=j) == 0:
@@ -594,12 +595,16 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
 
         # (1) = (\infty) is always a division point
         i0 = [ J(0) ]
-        # Divisor points of the form D=(x,y), i.e. with 1 term
+        # Divisor points of the form D=(x,y)
         i1 = itertools.imap(lambda x: J(x), self.torsion_points(r, p))
-        # Divisor points of the form D=(x0,y0)+(x1,y1), i.e. with 2 terms
-        i2 = self._two_term_division_points(r, p)
+        # Divisor points of the form D=2(x,y)
+        i2 = itertools.imap(lambda x: 2*J(x), self.torsion_points(2*r, p))
+        # Drop the second redundant (1)
+        i2 = itertools.islice(i2, 1, None)
+        # Divisor points of the form D=(x0,y0)+(x1,y1), x0!=x1
+        i3 = self._two_term_division_points(r, p)
 
-        return itertools.chain(i0, i1, i2)
+        return itertools.chain(i0, i1, i2, i3)
 
     # Find divisor points on the form D=(x0,y0)+(x1,y1), where y0!=0 and y1!=0
     def _two_term_division_points(self, r, p):
@@ -647,6 +652,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         # Vanishing of both determinants is a neccessary condition, so the intersection gives us a candidate set
         U_candidates = list(set1.intersection(set2))
         print U_candidates
+        print "!!len: " + str(len(U_candidates))
         for U in U_candidates:
             for V in self._enum_mumford_V(U, p):
                 jp = J(R2(U), R2(V))
