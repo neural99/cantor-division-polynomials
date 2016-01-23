@@ -557,7 +557,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             s_num = s_num.substitute(y0^(2*k) == (SR(self.G).substitute(x=x0))^k,
                                      y1^(2*k) == (SR(self.G).substitute(x=x1))^k)
         # s_num is anti-symmetric, divide with the Vandemonde determinant
-        assert bool(s_num.gcd(x0-x1) != 1):
+        assert bool(s_num.gcd(x0-x1) != 1)
         s_num = s_num / (x0-x1)
 
         # s_num is a symmetric polynomial in x0, x1.
