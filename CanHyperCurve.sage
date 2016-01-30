@@ -645,19 +645,19 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         H = HyperellipticCurve(R2(self.G))
         J = H.jacobian()
         set1 = set(self._U_candidates(M3, p))
-        print set1
+        #print set1
         set2 = set(self._U_candidates(M4, p))
-        print set2
+        #print set2
 
         # Vanishing of both determinants is a neccessary condition, so the intersection gives us a candidate set
         U_candidates = list(set1.intersection(set2))
-        print U_candidates
-        print "!!len: " + str(len(U_candidates))
+        #print U_candidates
+        #print "!!len: " + str(len(U_candidates))
         for U in U_candidates:
             for V in self._enum_mumford_V(U, p):
                 jp = J(R2(U), R2(V))
                 a = r * jp
-                print "(U,V)=" + str((U,V)) + " r * J(U,V)=" + str(a)
+                #print "(U,V)=" + str((U,V)) + " r * J(U,V)=" + str(a)
                 if a == 0:
                     yield jp
 
