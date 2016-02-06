@@ -1,6 +1,30 @@
 import itertools
 import random
 
+# Equality in the Jacobian is bugged!!!
+# Use this for removing duplicates 
+def remove_duplicates_jacobian(lst):
+    # Use string representation to compare. Should(?) work since polynomials are in lex order.
+    remove_ind = []
+    s_lst = sorted(lst, key=lambda k: str(k))
+    cmplst = map(lambda k: str(k), s_lst)
+    for ind in xrange(0, len(cmplst)-1):
+        e = cmplst[ind]
+
+        j = -1
+        while ind + j +1 < len(cmplst) and cmplst[ind+j+1] == e:
+            j += 1
+        if j > 0:
+            # Remove all entries with indicies ind+1, ..., ind+(j-1)
+            # Leaving only one entry (with index ind) equal to e
+            remove_ind.extend(xrange(ind+1, ind+j+1))
+
+    keep_ind = set(xrange(0, len(cmplst))) - set(remove_ind)
+    n_lst = [ s_lst[ind] for ind in xrange(0, len(cmplst)) if ind in keep_ind ]
+
+    return n_lst
+
+
 # Test Cantor's division point algorithm on some random curves of genus 2
 # over different prime fields F_p with p < 100
 def test_randoms():
@@ -599,12 +623,12 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         i1 = itertools.imap(lambda x: J(x), self.torsion_points(r, p))
         # Divisor points of the form D=2(x,y)
         i2 = itertools.imap(lambda x: 2*J(x), self.torsion_points(2*r, p))
-        # Drop the second redundant (1)
-        i2 = itertools.islice(i2, 1, None)
         # Divisor points of the form D=(x0,y0)+(x1,y1), x0!=x1
         i3 = self._two_term_division_points(r, p)
 
-        return itertools.chain(i0, i1, i2, i3)
+        chain = itertools.chain(i0, i1, i2, i3)
+        s = remove_duplicates_jacobian(list(chain))
+        return s
 
     # Find divisor points on the form D=(x0,y0)+(x1,y1), where y0!=0 and y1!=0
     def _two_term_division_points(self, r, p):
