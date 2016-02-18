@@ -17,6 +17,7 @@ class CanHyperCurveWrapper:
         
     def create_new_instance(self):
         if self.sage_instance:
+            self.sage_instance('quit')
             del self.sage_instance
 
         self.sage_instance = sage.interfaces.sage0.Sage()
