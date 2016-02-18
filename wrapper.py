@@ -1,4 +1,5 @@
 import sage.interfaces.sage0
+import sage.interfaces.quit
 
 class CanHyperCurveWrapper:
     def __init__(self, instance_limit):
@@ -16,8 +17,8 @@ class CanHyperCurveWrapper:
         return string_output
         
     def create_new_instance(self):
+        sage.interfaces.quit.expect_quitall(verbose=True)
         if self.sage_instance:
-            self.sage_instance('quit')
             del self.sage_instance
 
         self.sage_instance = sage.interfaces.sage0.Sage()
