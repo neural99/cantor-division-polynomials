@@ -1,11 +1,21 @@
 import sage.interfaces.sage0
 import sage.interfaces.quit
 
+import os
+
 class CanHyperCurveWrapper:
     def __init__(self, instance_limit):
         self.instance_limit = instance_limit
         self.sage_instance = None
         self.create_new_instance()
+
+    def reap_zombies(self):
+        while True:
+            try:
+                pid, exit_code = os.waitpid(-1, 0)
+                #print "Reaping " + str(pid)
+            except OSError:
+                break
         
     def compute_div_points(self, N, f, p):
         self.counter += 1
@@ -13,11 +23,12 @@ class CanHyperCurveWrapper:
             self.create_new_instance()
 
         string_output = self.sage_instance.eval('H=CanHyperCurve(2, ' + str(f) + '); len(list(H.division_points(' + str(N) + ',' + str(p) + '))) - 1')
-        #string_output = self.sage_instance.eval('H=CanHyperCurve(2, ' + str(f) + ');')
         return string_output
         
     def create_new_instance(self):
-        sage.interfaces.quit.expect_quitall(verbose=True)
+        sage.interfaces.quit.expect_quitall(verbose=False)
+        self.reap_zombies()
+
         if self.sage_instance:
             del self.sage_instance
 
