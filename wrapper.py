@@ -4,8 +4,9 @@ import sage.interfaces.quit
 import os
 
 class CanHyperCurveWrapper:
-    def __init__(self, instance_limit):
+    def __init__(self, instance_limit, algo):
         self.instance_limit = instance_limit
+        self.algo = algo
         self.sage_instance = None
         self.create_new_instance()
 
@@ -22,7 +23,11 @@ class CanHyperCurveWrapper:
         if self.counter > self.instance_limit:
             self.create_new_instance()
 
-        string_output = self.sage_instance.eval('H=CanHyperCurve(2, ' + str(f) + '); len(list(H.division_points(' + str(N) + ',' + str(p) + '))) - 1')
+        if self.algo == 'cantor':
+            string_output = self.sage_instance.eval('H=CanHyperCurve(2, ' + str(f) + '); len(list(H.division_points(' + str(N) + ',' + str(p) + '))) - 1')
+        else:
+            string_output = self.sage_instance.eval('H=CanHyperCurve(2, ' + str(f) + '); len(list(H.division_points_naive(' + str(N) + ',' + str(p) + '))) - 1')
+            
         return string_output
         
     def create_new_instance(self):
