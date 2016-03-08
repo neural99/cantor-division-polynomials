@@ -130,12 +130,13 @@ def _get_series_coeff(coeffs, k):
         if c[1] == k: return c[0]
     return 0
 
-# Reduce the expression from a symbolic polynomial in x over Z to a poly over F_p
-def _reduce_poly(exp, p):
+# Reduce the expression from a symbolic polynomial in x over Z to a poly over F_q
+def _reduce_poly(exp, q):
+    finite_field = GF(q, conway=True, prefix='u') 
     x = SR.var('x')
-    R = GF(p)['t']
+    R = finite_field['t']
     t = R.gen()
-    poly = R(exp.substitute(x=t))
+    poly = R(str(exp.substitute(x=t)))
     return poly
 
 # We have r*(x,y)=(delta(X), epsilon(X)) where the right hand side is semi-Mumford meaning that
@@ -148,30 +149,34 @@ def _get_monic_cantor_pol(delta, epsilon):
         epsilon = -epsilon
     return delta, epsilon
 
-# Enumerate monic polys in F_p[x] of degree <= g
-def enumerate_monic_polys(p, g):
+# Enumerate monic polys in F_q[x] of degree <= g
+def enumerate_monic_polys(q, g):
     lst = []
     for d in xrange(0, g + 1): # 0 <= d <= g
-        d_polys = _enumerate_polys_rec(p, d, [0], 0)
+        d_polys = _enumerate_polys_rec(q, d, [0], 0)
         lst.extend(d_polys)
     return lst
 
-def enumerate_polys(p, g):
+def enumerate_polys(q, g):
     yield 0
-    for poly in enumerate_monic_polys(p, g):
-        for n in xrange(1, p):
+    for poly in enumerate_monic_polys(q, g):
+        finite_field = GF(q, conway=True, prefix='u') 
+        units = set(finite_field) - set([0])
+        for n in units:
             yield n * poly
 
-def _enumerate_polys_rec(p, d, lst, i):
+def _enumerate_polys_rec(q, d, lst, i):
+    finite_field = GF(q, conway=True, prefix='u') 
+
     if i > d: return lst
     elif i == d:
         lst2 = map(lambda p: p + x^i, lst)
-        return _enumerate_polys_rec(p, d, lst2, i + 1)
+        return _enumerate_polys_rec(q, d, lst2, i + 1)
     else:
         lst2 = []
         for poly in lst:
-            lst2.extend([ poly + x^i * coeff for coeff in xrange(0, p) ])
-        return _enumerate_polys_rec(p, d, lst2, i + 1)
+            lst2.extend([ poly + x^i * coeff for coeff in finite_field ])
+        return _enumerate_polys_rec(q, d, lst2, i + 1)
 
 class CanHyperCurve(sage.structure.sage_object.SageObject):
     # g = genus of curve
@@ -179,6 +184,8 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
     def __init__(self, g, G):
         self.g = g
         self.G = G
+
+        var('u1,u2,u3,u4,u5,u6,u7,u8,u9,u10,u11,u12')
 
         x = SR.var('x')
         z = SR.var('z')
@@ -347,18 +354,18 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             return (psi / (2*y)^self.g).substitute(y=self.G^(1/2))
 
     # Find n-torsion points by calculating Cantor's div polys
-    def torsion_points(self, n, p):
+    def torsion_points(self, n, q):
         if n % 2 == 0:
-            return itertools.chain(self._find_2_torsion_points(n,p),
-                                   self._non_order_2_torsion_points(n,p))
+            return itertools.chain(self._find_2_torsion_points(n,q),
+                                   self._non_order_2_torsion_points(n,q))
         else:
-            return self._non_order_2_torsion_points(n,p)
+            return self._non_order_2_torsion_points(n,q)
 
-    def _non_order_2_torsion_points(self, n, p):
-        gc = _reduce_poly(self.compute_P(n - self.g + 1), p)
+    def _non_order_2_torsion_points(self, n, q):
+        gc = _reduce_poly(self.compute_P(n - self.g + 1), q)
         i = 1
         while n - self.g + 1 + i < n + self.g:
-            gc = gc.gcd(_reduce_poly(self.compute_P(n - self.g + 1 + i), p))
+            gc = gc.gcd(_reduce_poly(self.compute_P(n - self.g + 1 + i), q))
             i += 1
 
         xvalues = []
@@ -366,10 +373,11 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             if irr[0].degree() == 1:
                 x = irr[0].roots(multiplicities=False)[0]
                 xvalues.append(x)
-        return self._get_points_from_X_values(n, xvalues, p)
+        return self._get_points_from_X_values(n, xvalues, q)
 
-    def _get_points_from_X_values(self, n, xvalues, p):
-        R = GF(p)['x']
+    def _get_points_from_X_values(self, n, xvalues, q):
+        finite_field = GF(q, conway=True, prefix='u') 
+        R = finite_field['x']
         H = HyperellipticCurve(R(self.G))
         J = H.jacobian()
 
@@ -382,8 +390,9 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         return list(torsion)
 
     # Need to handle 2 torsion points seperately
-    def _find_2_torsion_points(self, n, p):
-        R = GF(p)['x']
+    def _find_2_torsion_points(self, n, q):
+        finite_field = GF(q, conway=True, prefix='u') 
+        R = finite_field['x']
         H = HyperellipticCurve(R(self.G))
 
         lst = []
@@ -430,17 +439,18 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         gamma =  C.substitute(z=4*self.G*z) * 2^vr * self.G^(vr/2)
         return gamma
 
-    # Find n-torsion points on the hyperelliptic curve y^2=f over F_p
+    # Find n-torsion points on the hyperelliptic curve y^2=f over F_q
     # Using "brute-forcing", i.e. looping over every element
-    def torsion_points_brute_force(self, n, p):
-        R = GF(p)['x']
+    def torsion_points_brute_force(self, n, q):
+        finite_field = GF(q, conway=True, prefix='u') 
+        R = finite_field['x']
         poly = R(self.G)
         H = HyperellipticCurve(poly)
         J = H.jacobian()
 
         torsion = set()
 
-        for x in xrange(0, p):
+        for x in finite_field:
             points = H.lift_x(x, all=True)
             for point in points:
                 Jp = J(point)
@@ -450,19 +460,18 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
 
     # Enumerate possible polynomials V corresponding to U such that (U,V) is a well-defined divisor in Mumford representation
     # using a brute-force approach
-    def _naive_enum_mumford_V(self, U, p):
-        R = GF(p)['x']
+    def _naive_enum_mumford_V(self, U, q):
+        finite_field = GF(q, conway=True, prefix='u') 
+        R = finite_field['x']
         x = var('x')
         for V in enumerate_polys(p, U.degree(x) - 1):
-            q, r = R(V^2 - self.G).quo_rem(R(U))
+            quo, r = R(V^2 - self.G).quo_rem(R(U))
             if r == 0:
                 yield R(V)
 
     # More sophisticated approach in genus 2 case
-    def _genus_2_enum_mumford_V(self, U, p):
+    def _genus_2_enum_mumford_V(self, U, q):
         assert self.g == 2
-
-        #print U
 
         def square_root(K, v):
             s = sqrt(v)
@@ -478,9 +487,9 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
                     yield (F((-1)^i*y0), F((-1)^j*y1))
 
         # The double root case needs another iteration to get a poly such that V_1^2 - f = 0 (mod (x-x0)^2)
-        def double_root(U, f, x0, p):
+        def double_root(U, f, x0, q):
             x = var('x')
-            R = GF(p)
+            R = GF(q, conway=True, prefix='u')
             K = R['x']
             try:
                 y0 = square_root(R, R(f(x=x0)))
@@ -496,15 +505,17 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             return list(set([ K(W_2), K(-W_2)]))
 
         # Do the computations in the splitting field of U
-        def single_irreducible_factor(U, f, p):
+        def single_irreducible_factor(U, f, q):
             lst = []
             x, t = var('x'), var('t')
-            R = GF(p)['t']
-            K = GF(p^2, 't', modulus=U)
+            finite_field = GF(q, conway=True, prefix='u')
+            R = finite_field['t']
+            K = GF(q^2, conway=True, prefix='u')
             F = K['x']
             a = R(f(x=t))
-            t1 = K.gen()
-            t2 = -F((U)/(x-t1)).list()[0]
+            # Find the roots of U in K
+            t1 = F(U).roots()[0][0]
+            t2 = F(U).roots()[1][0]
             p1, p2 = K(a(t=t1)), K(a(t=t2))
             try:
                 y0, y1 = square_root(K, p1), square_root(K, p2)
@@ -519,18 +530,18 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             x = F.gen()
             for (V_1, V_2) in permute_signs(y0, y1, F):
                 V = crt(V_1, V_2, F(x-t1), F(x-t2))
-                if V in GF(p)['x']:
+                if V in finite_field['x']:
                     lst.append(V)
             return list(set(lst))
 
         # In the case U splits into two linear factors, no field extension is neccessary
-        def two_linear_factors(U, f, p, factors):
+        def two_linear_factors(U, f, q, factors):
             lst = []
-            K = GF(p)
+            K = GF(q, conway=True, prefix='u')
 
             if factors[0][1] == 2: # Double root
                 x = -factors[0][0].list()[0]
-                return double_root(U, f, x, p)
+                return double_root(U, f, x, q)
             else:
                 x0 = -factors[0][0].list()[0]
                 x1 = -factors[1][0].list()[0]
@@ -543,12 +554,12 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
                 return []
             for (V_1, V_2) in permute_signs(y0, y1, F):
                 V = crt(F(V_1), F(V_2), F(x-x0), F(x-x1))
-                if V in GF(p)['x']:
+                if V in K['x']:
                     lst.append(V)
             return list(set(lst))
 
-        def single_linear_factor(U, f, p, factors):
-            K = GF(p)
+        def single_linear_factor(U, f, q, factors):
+            K = GF(q, conway=True, prefix='u')
             x0 = -factors[0][0].list()[0]
             F = K['x']
             x = F.gen()
@@ -559,7 +570,8 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             return list(set([ F(y0), F(-y0)]))
 
         lst = []
-        R = GF(p)['x']
+        finite_field = GF(q, conway=True, prefix='u')
+        R = finite_field['x']
         factors = list(R(U).factor())
         n_factors = sum(map(lambda x: x[1], factors))
         # U is either (i) a constant,  (ii) singe linear factor, (iii) a single irreducible factor,
@@ -567,17 +579,18 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         if n_factors == 0:
             return [ R(0) ]
         elif n_factors == 1 and factors[0][0].degree() == 2:
-                return single_irreducible_factor(U, R(self.G), p)
+                return single_irreducible_factor(U, R(self.G), q)
         elif n_factors == 1 and factors[0][0].degree() == 1:
-                return single_linear_factor(U, R(self.G), p, factors)
+                return single_linear_factor(U, R(self.G), q, factors)
         elif n_factors == 2:
-            return two_linear_factors(U, R(self.G), p, factors)
+            return two_linear_factors(U, R(self.G), q, factors)
         else:
             raise ValueError("Invalid U supplied")
 
-    def _U_candidates(self, M, p):
+    def _U_candidates(self, M, q):
         x = var('x')
         x0, x1, y0, y1 = var('x0', 'x1', 'y0', 'y1')
+        finite_field = GF(q, conway=True, prefix='u')
 
         s_num = SR(M.determinant().numerator())
         d = max(s_num.degree(y0), s_num.degree(y1))
@@ -590,53 +603,47 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
 
         # s_num is a symmetric polynomial in x0, x1.
         a = symmetric_poly_on_elementary_basis(s_num.factor()).factor()
-        #import sympy
-        #import sympy.polys.polyfuncs
-        #a2 = sympy.polys.polyfuncs.symmetrize(s_num.factor(), formal=True)[0].factor()
-        #print bool(SR(a1 == a2))
-        #print "a1"
-        #print a1
-        #print "a2"
-        #print a2
-        
-        R = GF(p)['s1', 's2']
-        for i in GF(p):
-            for j in GF(p):
+
+        R = finite_field['s1', 's2']
+        for i in finite_field:
+            for j in finite_field:
                 if R(a).substitute(s1=i, s2=j) == 0:
                     yield x^2 - i * x + j
 
     # Get r-divison points for hyperelliptic curve of genus 2
     # I.e. divisors D of J(C)/F_p such that r*D~0.
-    def division_points(self, r, p):
+    def division_points(self, r, q):
         # Only works for genus 2 curves
         assert self.g == 2
         # Algorithm does not work for even r since the formula (8.35) does not hold for order 2 points.
         assert r % 2 == 1
 
-        R2 = GF(p)['x']
+        finite_field = GF(q, conway=True, prefix='u')
+        R2 = finite_field['x']
         H = HyperellipticCurve(R2(self.G))
         J = H.jacobian()
 
         # (1) = (\infty) is always a division point
         i0 = [ J(0) ]
         # Divisor points of the form D=(x,y)
-        i1 = itertools.imap(lambda x: J(x), self.torsion_points(r, p))
+        i1 = itertools.imap(lambda x: J(x), self.torsion_points(r, q))
         # Divisor points of the form D=2(x,y)
-        i2 = itertools.imap(lambda x: 2*J(x), self.torsion_points(2*r, p))
+        i2 = itertools.imap(lambda x: 2*J(x), self.torsion_points(2*r, q))
         # Divisor points of the form D=(x0,y0)+(x1,y1), x0!=x1
-        i3 = self._two_term_division_points(r, p)
+        i3 = self._two_term_division_points(r, q)
 
         chain = itertools.chain(i0, i1, i2, i3)
         s = remove_duplicates_jacobian(list(chain))
         return s
 
     # Find divisor points on the form D=(x0,y0)+(x1,y1), where y0!=0 and y1!=0
-    def _two_term_division_points(self, r, p):
+    def _two_term_division_points(self, r, q):
         assert self.g == 2
 
         x, y, z, X = var('x','y', 'z', 'X')
         x0, x1, y0, y1 = var('x0', 'x1', 'y0', 'y1')
         e1, e2 = var('e1', 'e2')
+        finite_field = GF(q, conway=True, prefix='u')
 
         R = QQ
         K = R['x0,y0,x1,y1']
@@ -665,36 +672,32 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
 
         # (delta_0, epsilon_0) and (delta_1, epsilon_1) are propotional if r*D=r*(delta_0, epsilon_0) + r*(delta_1, epsilon_1)=0
         lst = []
-        R2 = GF(p)['x']
+        R2 = finite_field['x']
         H = HyperellipticCurve(R2(self.G))
         J = H.jacobian()
-        set1 = set(self._U_candidates(M3, p))
-        #print set1
-        set2 = set(self._U_candidates(M4, p))
-        #print set2
+        set1 = set(self._U_candidates(M3, q))
+        set2 = set(self._U_candidates(M4, q))
 
         # Vanishing of both determinants is a neccessary condition, so the intersection gives us a candidate set
         U_candidates = list(set1.intersection(set2))
-        #print U_candidates
-        #print "!!len: " + str(len(U_candidates))
         for U in U_candidates:
-            for V in self._enum_mumford_V(U, p):
+            for V in self._enum_mumford_V(U, q):
                 jp = J(R2(U), R2(V))
                 a = r * jp
-                #print "(U,V)=" + str((U,V)) + " r * J(U,V)=" + str(a)
                 if a == 0:
                     yield jp
 
     # Find division points using a naive, brute-force algorithm
-    def division_points_naive(self, r, p):
-        R = GF(p)['x']
+    def division_points_naive(self, r, q):
+        finite_field = GF(q, conway=True, prefix='u')
+        R = finite_field['x']
         x= R.gen()
         H = HyperellipticCurve(R(self.G))
         J = H.jacobian()
 
         lst = []
-        for U in enumerate_monic_polys(p, self.g):
-            for V in self._enum_mumford_V(U, p):
+        for U in enumerate_monic_polys(q, self.g):
+            for V in self._enum_mumford_V(U, q):
                 d = J(R(U), R(V))
                 if r*d == 0:
                     if not d in lst:
