@@ -27,14 +27,14 @@ N = 3
         
 s = 0
 i = 0
-print p^5-p^3 # Total number of non-singular f
+#print p^5-p^3 # Total number of non-singular f
 for f in enumerate_polys_all(p,5):
     if f.discriminant() != 0:
         g = SR(str(f))
-        print "f  = " + str(g) + " i = " + str(i)
         i += 1
         H = CanHyperCurve(2, g)
         div_points = len(list(H.division_points(N, p))) - 1
         s += div_points
+        print "f  = " + str(g) + "d = " + str(div_points) + " i = " + str(i)
         del H
 print "Total. p=3 N=3: " + str(s)

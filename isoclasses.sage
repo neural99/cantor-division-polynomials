@@ -31,7 +31,18 @@ def orbits():
             flat.extend(list(orbit))
     return lst
 
-N=3
+
+def get_automorphisms_size_from_magma(f):
+    s = '''
+P<x> := PolynomialRing(GF(3));
+C1 := HyperellipticCurve(eq);
+G1, m1 := AutomorphismGroup(C1);
+#G1;
+'''
+    cmd = s.replace('eq', str(f))
+    return sage.interfaces.magma_free.magma_free_eval(cmd)
+
+N=5
 
 s = 0
 print len(orbits())
@@ -40,9 +51,10 @@ for o in orbits():
     f = SR(str(o[0]))
     i += 1
     H = CanHyperCurve(2, f)
-    div_points = len(list(H.division_points(N, p))) - 1
-    s += div_points*len(o)
-    print "f = " + str(f) + " div points = " + str(div_points)
+    div_points = len(list(H.division_points_naive(N, p)))-1
+    auto = get_automorphisms_size_from_magma(f)
+    s += div_points*(1/SR(auto))
+    print str(f) + "," + str(div_points) + "," + str(auto)
 
     del H
 print "Totalt N=3, p=3 : " + str(s)
