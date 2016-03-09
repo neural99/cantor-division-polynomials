@@ -39,4 +39,5 @@ class CanHyperCurveWrapper:
 
         self.sage_instance = sage.interfaces.sage0.Sage()
         self.sage_instance('load("CanHyperCurve.sage")')
+        self.sage_instance('var("u2")')
         self.counter = 0

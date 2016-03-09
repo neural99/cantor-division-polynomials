@@ -112,8 +112,9 @@ def naive_benchmark():
 
 # Write symmetric polynoimal in elementary symmetric polynomials.
 # Adapted from https://groups.google.com/forum/#!msg/sage-support/mOhavaXWIjQ/bSbkK6_2BC0J
-def symmetric_poly_on_elementary_basis(poly):
-    R.<x0,x1,s1,s2> = PolynomialRing(QQ,order = TermOrder('degrevlex',2)+TermOrder('degrevlex',2))
+def symmetric_poly_on_elementary_basis(poly, q):
+    finite_field = GF(q, conway=True, prefix='u')
+    R.<x0,x1,s1,s2,u2,u4,u6,u8> = PolynomialRing(QQ,order = TermOrder('degrevlex',2)+TermOrder('degrevlex',2)+TermOrder('degrevlex', 4))
     sym = []
     xvars = [x0,x1]
     for i in range(1,3):
@@ -121,7 +122,7 @@ def symmetric_poly_on_elementary_basis(poly):
         for p in itertools.combinations([0,1],i):
             temp = temp + prod([xvars[p[j]] for j in range(i)])
         sym.append(sage_eval('s' + str(i), locals=locals()) - temp)
-    symid = R.ideal(sym + [R(poly)]).elimination_ideal([x0,x1])
+    symid = R.ideal(sym + [R(str(poly))]).elimination_ideal([x0,x1])
     return symid.gens()[0]
 
 # Extract the coeff of kth power in the coeffients list outputed by coefficients()
@@ -294,7 +295,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         z = SR.var('z')
         num = y * z * (self.compute_psi(r-1)^2 * self._compute_delta(r+1) - self.compute_psi(r+1)^2 * self._compute_delta(r-1))
         den = self.compute_psi(r-1) * self.compute_psi(r)^2 * self.compute_psi(r+1)
-        R = ZZ['x,y']
+        R = ZZ['x,y,u0,u1,u2,u3,u4,u5,u6,u7,u8,u9,u10']
         F = PolynomialRing(R, 'z')
         delta = F(self._compute_delta(r))
         quot = F(num) / R(den)
@@ -376,14 +377,14 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         return self._get_points_from_X_values(n, xvalues, q)
 
     def _get_points_from_X_values(self, n, xvalues, q):
-        finite_field = GF(q, conway=True, prefix='u') 
-        R = finite_field['x']
-        H = HyperellipticCurve(R(self.G))
+        R = GF(q, conway=True, prefix='u')['x']
+        f = R(str(self.G))
+        H = HyperellipticCurve(f)
         J = H.jacobian()
 
         torsion = set()
         for x in xvalues:
-            nx = R(x)
+            nx = R(str(x))
             points = H.lift_x(nx, all=True)
             for point in points:
                  torsion.add(point)
@@ -391,13 +392,13 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
 
     # Need to handle 2 torsion points seperately
     def _find_2_torsion_points(self, n, q):
-        finite_field = GF(q, conway=True, prefix='u') 
-        R = finite_field['x']
-        H = HyperellipticCurve(R(self.G))
+        R = GF(q, conway=True, prefix='u')['x']
+        f = R(str(self.G))
+        H = HyperellipticCurve(f)
 
         lst = []
 
-        for irr in R(self.G).factor():
+        for irr in f.factor():
             if irr[0].degree() == 1:
                 x = irr[0].roots(multiplicities=False)[0]
                 lst.append(H(x,0))
@@ -531,6 +532,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             for (V_1, V_2) in permute_signs(y0, y1, F):
                 V = crt(V_1, V_2, F(x-t1), F(x-t2))
                 if V in finite_field['x']:
+                    V = finite_field['x'](V)
                     lst.append(V)
             return list(set(lst))
 
@@ -555,6 +557,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
             for (V_1, V_2) in permute_signs(y0, y1, F):
                 V = crt(F(V_1), F(V_2), F(x-x0), F(x-x1))
                 if V in K['x']:
+                    V = K['x'](V)
                     lst.append(V)
             return list(set(lst))
 
@@ -572,6 +575,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         lst = []
         finite_field = GF(q, conway=True, prefix='u')
         R = finite_field['x']
+        f = R(str(self.G))
         factors = list(R(U).factor())
         n_factors = sum(map(lambda x: x[1], factors))
         # U is either (i) a constant,  (ii) singe linear factor, (iii) a single irreducible factor,
@@ -579,11 +583,11 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         if n_factors == 0:
             return [ R(0) ]
         elif n_factors == 1 and factors[0][0].degree() == 2:
-                return single_irreducible_factor(U, R(self.G), q)
+                return single_irreducible_factor(U, f, q)
         elif n_factors == 1 and factors[0][0].degree() == 1:
-                return single_linear_factor(U, R(self.G), q, factors)
+                return single_linear_factor(U, f, q, factors)
         elif n_factors == 2:
-            return two_linear_factors(U, R(self.G), q, factors)
+            return two_linear_factors(U, f, q, factors)
         else:
             raise ValueError("Invalid U supplied")
 
@@ -597,12 +601,13 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         for k in xrange(1, d/2+1):
             s_num = s_num.substitute(y0^(2*k) == (SR(self.G).substitute(x=x0))^k,
                                      y1^(2*k) == (SR(self.G).substitute(x=x1))^k)
+        s_num = s_num.factor()
         # s_num is anti-symmetric, divide with the Vandemonde determinant
-        assert bool(s_num.gcd(x0-x1) != 1)
+        assert bool(SR(s_num).gcd(SR(x0-x1)) != 1)
         s_num = s_num / (x0-x1)
 
         # s_num is a symmetric polynomial in x0, x1.
-        a = symmetric_poly_on_elementary_basis(s_num.factor()).factor()
+        a = symmetric_poly_on_elementary_basis(s_num.factor(), q).factor()
 
         R = finite_field['s1', 's2']
         for i in finite_field:
@@ -611,16 +616,16 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
                     yield x^2 - i * x + j
 
     # Get r-divison points for hyperelliptic curve of genus 2
-    # I.e. divisors D of J(C)/F_p such that r*D~0.
+    # I.e. divisors D of J(C)/F_q such that r*D~0.
     def division_points(self, r, q):
         # Only works for genus 2 curves
         assert self.g == 2
         # Algorithm does not work for even r since the formula (8.35) does not hold for order 2 points.
         assert r % 2 == 1
 
-        finite_field = GF(q, conway=True, prefix='u')
-        R2 = finite_field['x']
-        H = HyperellipticCurve(R2(self.G))
+        R2 = GF(q, conway=True, prefix='u')['x']
+        f = R2(str(self.G))
+        H = HyperellipticCurve(f)
         J = H.jacobian()
 
         # (1) = (\infty) is always a division point
@@ -646,7 +651,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         finite_field = GF(q, conway=True, prefix='u')
 
         R = QQ
-        K = R['x0,y0,x1,y1']
+        K = R['x0,y0,x1,y1,u2,u4,u6,u8']
         F = Frac(K)
         G = PolynomialRing(F, 'X')
 
@@ -672,8 +677,9 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
 
         # (delta_0, epsilon_0) and (delta_1, epsilon_1) are propotional if r*D=r*(delta_0, epsilon_0) + r*(delta_1, epsilon_1)=0
         lst = []
-        R2 = finite_field['x']
-        H = HyperellipticCurve(R2(self.G))
+        R2 = GF(q, conway=True, prefix='u')['x']
+        f = R2(str(self.G))
+        H = HyperellipticCurve(f)
         J = H.jacobian()
         set1 = set(self._U_candidates(M3, q))
         set2 = set(self._U_candidates(M4, q))
@@ -682,7 +688,7 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         U_candidates = list(set1.intersection(set2))
         for U in U_candidates:
             for V in self._enum_mumford_V(U, q):
-                jp = J(R2(U), R2(V))
+                jp = J(R2(str(U)), R2(str(V)))
                 a = r * jp
                 if a == 0:
                     yield jp
@@ -692,13 +698,14 @@ class CanHyperCurve(sage.structure.sage_object.SageObject):
         finite_field = GF(q, conway=True, prefix='u')
         R = finite_field['x']
         x= R.gen()
-        H = HyperellipticCurve(R(self.G))
+        f = R(str(self.G)) 
+        H = HyperellipticCurve(f)
         J = H.jacobian()
 
         lst = []
         for U in enumerate_monic_polys(q, self.g):
             for V in self._enum_mumford_V(U, q):
-                d = J(R(U), R(V))
+                d = J(R(str(U)), R(str(V)))
                 if r*d == 0:
                     if not d in lst:
                         lst.append(d)
