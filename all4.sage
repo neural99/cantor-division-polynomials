@@ -128,9 +128,9 @@ def compute_s(W, N, f, q, weight, i, true_ind, curr_sum):
 
     return s
 
-def count1(N, q, algo='cantor',starting_ind=0, instance_limit=10):
+def count1(N, q, algo='cantor',starting_ind=0, instance_limit=10, c_sum=0):
     i = 0
-    s = 0
+    s = c_sum 
 
     finite_field = GF(q, conway=True, prefix='u')
     units = set(finite_field) - set([0])
@@ -199,13 +199,13 @@ def email_success(N, q, c, wtime):
         msg += "Wall time needed: " + str(wtime) 
         os.system('echo "' + msg + '" | ssmtp daniel.lannstrom@gmail.com')
 
-def calculate_sum(alg, instance_limit, N, qlist):
+def calculate_sum(alg, instance_limit, N, qlist, index=0, c_sum=0):
     last_clock = time.clock()
     #for p in [3,7,11, 13, 17, 19, 23, 29, 31,37,41,43,47,53,59,61,67]:
     for q in qlist:
         finite_field = GF(q, conway=True, prefix='u')
         x = finite_field['x'].gen()
-        c = count1(N, q, algo=alg, instance_limit=instance_limit)
+        c = count1(N, q, algo=alg, instance_limit=instance_limit, starting_ind=index, c_sum=c_sum)
         wtime = time.clock() - last_clock
         print "!! Total N = " + str(N) + " q = " + str(q) + ": " + str(c) + ", wtime = " + str(wtime)
         email_success(N, q, c, wtime)
@@ -218,11 +218,11 @@ def calculate_sum(alg, instance_limit, N, qlist):
         last_clock = time.clock()
 
 def usage():
-    print "Usage: sage all4.sage <email-result?> <algo> <instance-limit> <N> <list of q values to calculate>"
+    print "Usage: sage all4.sage <email-result?> <algo> <instance-limit> <N> <list of q values to calculate> <starting index> <starting sum>"
     sys.exit(1)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 8:
         usage()
     try:
         email_flag = sys.argv[1]
@@ -233,7 +233,9 @@ if __name__ == "__main__":
         instance_limit = int(sys.argv[3])
         N = int(sys.argv[4])
         qlist = [ int(s) for s in sys.argv[5].split(",") ]
-        print "Input: N = " + str(N) + " qlist = " + str(qlist)
+        t_ind = int(sys.argv[6])
+        s_sum = int(sys.argv[7])
+        print "Input: N = " + str(N) + " qlist = " + str(qlist) + " starting t_ind = " + str(t_ind) + " starting sum = " + str(s_sum)
     except ValueError as e:
         usage()
-    calculate_sum(algo, instance_limit, N, qlist)
+    calculate_sum(algo, instance_limit, N, qlist, index=t_ind, c_sum=s_sum)
