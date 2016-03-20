@@ -4,32 +4,34 @@ import itertools
 
 load('CanHyperCurve.sage')
 
-def enumerate_polys(p):
-    for a5 in xrange(1, p):
-        for a3 in xrange(0, p):
-            for a2 in xrange(0, p):
-                for a1 in xrange(0, p):
-                    for a0 in xrange(0, p):
-                        pol = GF(p)['x'](a5 * x^5 + a3 * x^3 + a2 * x^2 + a1 * x + a0)
+def enumerate_polys(q):
+    finite_field = GF(q, conway=True, prefix='u') 
+    units = set(GF(q, conway=True, prefix='u')) - set([0])
+    for a5 in units:
+        for a3 in finite_field:
+            for a2 in finite_field:
+                for a1 in finite_field:
+                    for a0 in finite_field:
+                        pol = finite_field['x'](a5 * x^5 + a3 * x^3 + a2 * x^2 + a1 * x + a0)
                         if pol.discriminant() != 0:
                             yield pol
 
 
 N = 3
-p = 3
+q = 9
 
-x = GF(p)['x'].gen()
+finite_field = GF(q, conway=True, prefix='u') 
+x = finite_field['x'].gen()
 
 s = 0
 i = 0
-print p^5-p^3 # Total number of non-singular f
-for f in enumerate_polys(p):
+for f in enumerate_polys(q):
     g = SR(str(f))
     i += 1
     H = CanHyperCurve(2, g)
-    #div_points = len(list(H.division_points_naive(N, p))) - 1
-    div_points = 1
-    s += div_points
+    div_points = len(list(H.division_points_naive(N, q))) - 1
+    #div_points = 1
+    s += div_points/(q-1)^2
     print "f  = " + str(g) + "d = " + str(div_points) + " i = " + str(i)
     del H
-print "Total. p=3 N=3: " + str(s)
+print "Total. N=" + str(N) + " q = " + str(q) + ": " + str(s)
