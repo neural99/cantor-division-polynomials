@@ -2,6 +2,8 @@ import itertools
 import os
 import time
 
+EMAIL = 'change@me.com'
+
 # DOES NOT WORK in char=5 since we need to divide with 5
 
 load('CanHyperCurve.sage')
@@ -102,9 +104,9 @@ def email_error(s):
     if email_flag == 'true':
         msg = "Subject: all4.sage error\n\n"
         msg += s
-        os.system('echo "' + msg + '" | ssmtp daniel.lannstrom@gmail.com')
+        os.system('echo "' + msg + '" | ssmtp ' + EMAIL)
 
-def compute_s(W, N, f, q, weight, i, true_ind, curr_sum):
+def compute_s(W, N, f, q, weight, i, true_ind, curr_sum, starting_index):
     while True:
         emailed_error = False
         try:
@@ -124,7 +126,7 @@ def compute_s(W, N, f, q, weight, i, true_ind, curr_sum):
         break
 
     # Print status line
-    print "f = " + str(g) + " d = " + str(div_points) + "w = " + str(weight) +  " i = " + str(i) + " t_ind = " + str(true_ind) + " c_sum = " + str(curr_sum)
+    print "f = " + str(g) + " d = " + str(div_points) + "w = " + str(weight) +  " i = " + str(i) + " t_ind = " + str(true_ind+starting_index) + " c_sum = " + str(curr_sum)
 
     return s
 
@@ -141,13 +143,13 @@ def count1(N, q, algo='cantor',starting_ind=0, instance_limit=10, c_sum=0):
     W = wrapper.CanHyperCurveWrapper(instance_limit, algo)
     
     for true_ind, (f, weight, res) in enumerate(itertools.islice(enumerate_polys(q), starting_ind, None)):
-        s += compute_s(W, N, f, q, weight, i, true_ind, s)
+        s += compute_s(W, N, f, q, weight, i, true_ind, s, starting_ind)
         i += 1
 
         # If res is true, then we need to deal with quadratic non-residues
         if res:
             g = SR(r * f)
-            s += compute_s(W, N, g, q, weight, i, true_ind, s)
+            s += compute_s(W, N, g, q, weight, i, true_ind, s, starting_ind)
             i += 1
         
     return s
@@ -197,11 +199,10 @@ def email_success(N, q, c, wtime):
     if email_flag == 'true':
         msg = "Subject: Calcuation Done! N = " + str(N) + " q = " + str(q) + " c = " + str(c) + "\n\n"
         msg += "Wall time needed: " + str(wtime) 
-        os.system('echo "' + msg + '" | ssmtp daniel.lannstrom@gmail.com')
+        os.system('echo "' + msg + '" | ssmtp ' + EMAIL)
 
 def calculate_sum(alg, instance_limit, N, qlist, index=0, c_sum=0):
     last_clock = time.clock()
-    #for p in [3,7,11, 13, 17, 19, 23, 29, 31,37,41,43,47,53,59,61,67]:
     for q in qlist:
         finite_field = GF(q, conway=True, prefix='u')
         x = finite_field['x'].gen()
